@@ -67,3 +67,5 @@ julia> timings_tracked()
    myfunc_inner        2   8.13μs    0.0%  4.06μs   1.75KiB    1.3%     896B
  ───────────────────────────────────────────────────────────────────────────
 ```
+
+Note that **we didn't have to augment our source code** (i.e. the definitions of `myfunc_outer` and `myfunc_inner`) with `@timeit ...` bits!
