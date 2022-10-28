@@ -38,7 +38,7 @@ julia> timings_tracked()
 
 Note that **we didn't have to augment our source code** (i.e. the definitions of `A`, `B`, `C`, or `rand`) with `@timeit ...` bits!
 
-If you want the types of the function arguments as well, you can set `TimerOutputsTracked.show_argtypes() = true`:
+If you want the function argument types as well, you can set `TimerOutputsTracked.show_argtypes() = true`:
 
 ```julia
 julia> TimerOutputsTracked.show_argtypes() = true
