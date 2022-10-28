@@ -44,11 +44,9 @@ julia> function myfunc_outer()
            C .+= myfunc_inner(A, B)
            C .+= myfunc_inner(A, B)
            return C
-       end
-myfunc_outer (generic function with 1 method)
+       end;
 
-julia> myfunc_inner(A,B) = A*B
-myfunc_inner (generic function with 1 method)
+julia> myfunc_inner(A,B) = A*B;
 
 julia> TimerOutputsTracked.track(myfunc_outer, myfunc_inner, rand)
 
