@@ -41,7 +41,7 @@ Note that **we didn't have to augment our source code** (i.e. the definitions of
 If you want to see the types of the function arguments as well, you can set `TimerOutputsTracked.show_argtypes() = true`:
 
 ```julia
-julia> TimerOutputsTracked.show_args() = true
+julia> TimerOutputsTracked.show_argtypes() = true
 
 julia> @timetracked A();
 

@@ -8,7 +8,7 @@ const TRACKED_FUNCS = Set{Function}()
 const TO = TimerOutput()
 
 verbose() = false
-show_args() = false
+show_argtypes() = false
 
 Cassette.@context TOCtx
 
@@ -18,7 +18,7 @@ function Cassette.overdub(ctx::TOCtx, f, args...)
         argtypes = typeof.(args)
         verbose() && println("OVERDUBBING: ", f, argtypes)
         # return @timeit gettimer() "$f" f(args...)
-        if show_args()
+        if show_argtypes()
             timer_groupname = "$f $argtypes"
         else
             timer_groupname = "$f"
