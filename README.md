@@ -2,6 +2,8 @@
 
 TimerOutputsTracked = [TimerOutputs.jl](https://github.com/KristofferC/TimerOutputs.jl) + [Cassette.jl](https://github.com/JuliaLabs/Cassette.jl) to the end of timing all calls of "tracked" functions
 
+**Warning**: I haven't assessed the overhead of the overdubbing mechanism yet, so expect timings, in particular of very fast functions, to be off!
+
 ### Example
 
 ```julia
