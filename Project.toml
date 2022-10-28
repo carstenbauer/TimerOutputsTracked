@@ -1,7 +1,12 @@
-name = "TimerOutputsCassette"
-uuid = "0b572843-38ca-4700-8936-84827897c17c"
+name = "TimerOutputsTracked"
+uuid = "b7f56324-a402-46ca-97c6-0c2070d3093d"
 authors = ["Carsten Bauer <crstnbr@gmail.com> and contributors"]
 version = "0.1.0"
+
+[deps]
+Cassette = "7057c7e9-c182-5462-911a-8362d720325c"
+MacroTools = "1914dd2f-81c6-5fcd-8719-6d5c9610ff09"
+TimerOutputs = "a759f4b9-e2f1-59dc-863e-4aeb61b1ea8f"
 
 [compat]
 julia = "1"
