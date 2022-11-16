@@ -11,6 +11,8 @@ Cassette.@context TOCtx
 
 # function Cassette.overdub(::TOCtx, f::T, args...) where T<:Function
 function Cassette.overdub(ctx::TOCtx, f, args...)
+    kw = ctx.metadata[:kw]  # github.com/JuliaLabs/Cassette.jl/issues/152
+    isempty(kw) || @warn "discarding keyword arguments" kw  # TODO: handle keyword arguments ?
     if f in TRACKED_FUNCS
         argtypes = typeof.(args)
         ctx.metadata[:verbose] && println("OVERDUBBING: ", f, argtypes)
@@ -19,7 +21,7 @@ function Cassette.overdub(ctx::TOCtx, f, args...)
             timer_groupname *= string(argtypes)
         end
         if ctx.metadata[:functionloc]
-            filename, line = '?', '?'
+            filename, line = "?", 0
             try
                 filename, line = functionloc(f, argtypes)
                 if (prefix = ctx.metadata[:prefix]) !== nothing
@@ -27,7 +29,7 @@ function Cassette.overdub(ctx::TOCtx, f, args...)
                 end
             catch
             end
-            timer_groupname *= " at " * filename * ':' * string(line)
+            timer_groupname *= " at " * something(filename, "?") * ":" * (line == 0 ? "?" : string(line))
         end
         return @timeit TO[] timer_groupname Cassette.recurse(ctx, f, args...)
     else
@@ -38,13 +40,15 @@ end
 function timetracked(
     f, args...;
     reset_timer=true, warn=false,
-    verbose=false, argtypes=false, functionloc=false, prefix=homedir() => "~"
+    verbose=false, argtypes=false, functionloc=false, prefix=homedir() => "~",
+    kw...
 )
     metadata = (;
         verbose,
         argtypes,
         functionloc,
-        prefix
+        prefix,
+        kw
     )
     reset_timer && TimerOutputsTracked.reset_timer()
     enable_timer!(TO[])

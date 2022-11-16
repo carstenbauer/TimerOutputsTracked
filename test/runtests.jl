@@ -11,6 +11,8 @@ module MyModule
     baz() = 3 + bar()  # unexported
 end
 
+mysum(x, y) = x + y
+
 @testset "Basics" begin
     @testset "Tracking (bookkeeping)" begin
         @test isnothing(TOT.tracked(TEST_IO))
@@ -57,9 +59,10 @@ end
         @test TOT.hastimings()
         timings_tracked(TEST_IO)
     end
-    @testset "Arguments" begin
-        func(x, y) = x + y
-        @test @timetracked(func(1, 2)) == 3
+    @testset "Positional arguments" begin
+        TOT.reset()
+        TOT.track(mysum)
+        @test @timetracked(mysum(1, 2)) == 3
     end
     @testset "Track exported methods from Module" begin
         TOT.reset()
@@ -74,6 +77,12 @@ end
         @test TOT.istracked(MyModule.bar)
         @test TOT.istracked(MyModule.baz)  # track unexported method
         @test @timetracked(MyModule.baz()) == 6
+        timings_tracked(TEST_IO)
+    end
+    @testset "Options" begin
+        TOT.reset()
+        TOT.track(mysum)
+        @test @timetracked(mysum(2, 3.0), functionloc=true, argtypes=true) == 5.0
         timings_tracked(TEST_IO)
     end
 end
