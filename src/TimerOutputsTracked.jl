@@ -7,8 +7,8 @@ using MacroTools
 const TRACKED_FUNCS = Set{Function}()
 const TO = TimerOutput()
 
-verbose() = false
-show_argtypes() = false
+const VERBOSE = Ref(false)
+const SHOW_ARGTYPES = Ref(false)
 
 Cassette.@context TOCtx
 
@@ -16,9 +16,9 @@ Cassette.@context TOCtx
 function Cassette.overdub(ctx::TOCtx, f, args...)
     if f in TRACKED_FUNCS
         argtypes = typeof.(args)
-        verbose() && println("OVERDUBBING: ", f, argtypes)
+        VERBOSE[] && println("OVERDUBBING: ", f, argtypes)
         # return @timeit gettimer() "$f" f(args...)
-        timer_groupname = if show_argtypes()
+        timer_groupname = if SHOW_ARGTYPES[]
             "$f $argtypes"
         else
             "$f"
