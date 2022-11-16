@@ -9,22 +9,22 @@ const TO = Ref(TimerOutput())
 
 const VERBOSE = Ref(false)
 const SHOW_ARGTYPES = Ref(false)
-const SHOW_DEF = Ref(false)
+const SHOW_FUNCTIONLOC = Ref(false)
 const PREFIX = Ref(homedir() => "~")
 
 Cassette.@context TOCtx
 
 # function Cassette.overdub(::TOCtx, f::T, args...) where T<:Function
-function Cassette.overdub(ctx::TOCtx, f, args...)
+function Cassette.overdub(ctx::TOCtx, f, args...; show_argtypes=nothing, show_functionloc=nothing)
     if f in TRACKED_FUNCS
         argtypes = typeof.(args)
         VERBOSE[] && println("OVERDUBBING: ", f, argtypes)
         # return @timeit TO "$f" f(args...)
         timer_groupname = string(f)
-        if SHOW_ARGTYPES[]
+        if something(show_argtypes, SHOW_ARGTYPES[])
             timer_groupname *= string(argtypes)
         end
-        if SHOW_DEF[]
+        if something(show_functionloc, SHOW_FUNCTIONLOC[])
             filename, line = '?', '?'
             try
                 filename, line = functionloc(f, argtypes)
@@ -39,21 +39,25 @@ function Cassette.overdub(ctx::TOCtx, f, args...)
     end
 end
 
-function timetracked(f, args...; reset_timer=true, warn=false)
+function timetracked(f, args...; reset_timer=true, warn=false, kw...)
     reset_timer && TimerOutputsTracked.reset_timer()
     enable_timer!(TO[])
-    result = Cassette.overdub(TOCtx(), f, args...)
+    result = Cassette.overdub(TOCtx(), f, args...; kw...)
     disable_timer!(TO[])
     if warn && !hastimings()
-        @warn("No tracked functions have been called, so nothing has been timed.")
+        @warn "No tracked functions have been called, so nothing has been timed."
     end
     return result
 end
 
-macro timetracked(ex, reset_timer=true, warn=false)
+macro timetracked(ex, reset_timer=true, warn=false, show_argtypes=nothing, show_functionloc=nothing)
     @capture(ex, f_(args__))
     quote
-        TimerOutputsTracked.timetracked($f, $(args...); reset_timer=$reset_timer, warn=$warn)
+        TimerOutputsTracked.timetracked(
+            $f, $(args...);
+            reset_timer=$reset_timer, warn=$warn,
+            show_argtypes=$show_argtypes, show_functionloc=$show_functionloc
+        )
     end |> esc
 end
 
@@ -62,13 +66,12 @@ end
 
 Track functions exported from a module.
 """
-function track(m::Module; all = false)
+track(m::Module; all = false) =
     TimerOutputsTracked.track(filter(x -> x isa Function, getfield.(Ref(m), names(m; all)))...)
-end
 
 function track(f::Function)
     if f in TRACKED_FUNCS
-        @info("Already tracked.")
+        @info "Already tracked."
     else
         push!(TRACKED_FUNCS, f)
     end
@@ -81,7 +84,7 @@ function untrack(f)
     if f in TRACKED_FUNCS
         delete!(TRACKED_FUNCS, f)
     else
-        @info("Not tracked, thus can't untrack.")
+        @info "Not tracked, thus can't untrack."
     end
     return nothing
 end
