@@ -6,8 +6,8 @@ const tot = TimerOutputsTracked
 module MyModule
     export foo, bar
     foo() = 1
-    bar() = 2
-    baz() = 3  # unexported
+    bar() = 2 + foo()
+    baz() = 3 + bar()  # unexported
 end
 
 @testset "Basics" begin
@@ -30,7 +30,7 @@ end
         @test timetracked(sin, 3) == sin(3)
         @test tot.hastimings()
         @test isnothing(tot.timings_tracked())
-        @test isnothing(timings_tracked()) # exported
+        @test isnothing(timings_tracked())  # exported
 
         # macro
         tot.reset()
@@ -47,15 +47,14 @@ end
         @test isnothing(tot.track(+))
         @test timetracked(+, 3, 4) == 7
         @test tot.hastimings()
-        @test isnothing(tot.timings_tracked())
 
         # macro
         tot.reset()
         tot.track(+)
         @test !tot.hastimings()
-        res = @timetracked +(3, 4)
-        @test res == 7
+        @test @timetracked(+(3, 4)) == 7
         @test tot.hastimings()
+        timings_tracked()
     end
     @testset "Arguments" begin
         func(x, y) = x + y
@@ -70,6 +69,10 @@ end
     @testset "Track all Module methods" begin
         tot.reset()
         tot.track(MyModule; all = true)
-        @test tot.istracked(MyModule.baz)
+        @test tot.istracked(MyModule.foo)
+        @test tot.istracked(MyModule.bar)
+        @test tot.istracked(MyModule.baz)  # track unexported method
+        @test @timetracked(MyModule.baz()) == 6
+        timings_tracked()
     end
 end
