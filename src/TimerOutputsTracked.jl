@@ -40,10 +40,10 @@ function timetracked(f, args...; reset_timer=true, warn=false)
     return result
 end
 
-macro timetracked(ex)
+macro timetracked(ex, reset_timer=true, warn=false)
     @capture(ex, f_(args__))
     quote
-        TimerOutputsTracked.timetracked($f, $(args...))
+        TimerOutputsTracked.timetracked($f, $(args...); reset_timer=$reset_timer, warn=$warn)
     end |> esc
 end
 
