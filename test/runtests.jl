@@ -50,4 +50,8 @@ const tot = TimerOutputsTracked
         @test res == 7
         @test tot.hastimings()
     end
+    @testset "Arguments" begin
+        func(x, y) = x + y
+        @test @timetracked(func(1, 2)) == 3
+    end
 end
