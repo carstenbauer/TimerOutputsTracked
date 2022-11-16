@@ -7,28 +7,24 @@ using MacroTools
 const TRACKED_FUNCS = Set{Function}()
 const TO = Ref(TimerOutput())
 
-const VERBOSE = Ref(false)
-const SHOW_ARGTYPES = Ref(false)
-const SHOW_FUNCTIONLOC = Ref(false)
-const PREFIX = Ref(homedir() => "~")
-
 Cassette.@context TOCtx
 
 # function Cassette.overdub(::TOCtx, f::T, args...) where T<:Function
-function Cassette.overdub(ctx::TOCtx, f, args...; show_argtypes=nothing, show_functionloc=nothing)
+function Cassette.overdub(ctx::TOCtx, f, args...)
     if f in TRACKED_FUNCS
         argtypes = typeof.(args)
-        VERBOSE[] && println("OVERDUBBING: ", f, argtypes)
-        # return @timeit TO "$f" f(args...)
+        ctx.metadata[:verbose] && println("OVERDUBBING: ", f, argtypes)
         timer_groupname = string(f)
-        if something(show_argtypes, SHOW_ARGTYPES[])
+        if ctx.metadata[:argtypes]
             timer_groupname *= string(argtypes)
         end
-        if something(show_functionloc, SHOW_FUNCTIONLOC[])
+        if ctx.metadata[:functionloc]
             filename, line = '?', '?'
             try
                 filename, line = functionloc(f, argtypes)
-                filename = replace(filename, PREFIX[])
+                if (prefix = ctx.metadata[:prefix]) !== nothing
+                    filename = replace(filename, prefix)
+                end
             catch
             end
             timer_groupname *= " at " * filename * ':' * string(line)
@@ -39,10 +35,20 @@ function Cassette.overdub(ctx::TOCtx, f, args...; show_argtypes=nothing, show_fu
     end
 end
 
-function timetracked(f, args...; reset_timer=true, warn=false, kw...)
+function timetracked(
+    f, args...;
+    reset_timer=true, warn=false,
+    verbose=false, argtypes=false, functionloc=false, prefix=homedir() => "~"
+)
+    metadata = (;
+        verbose,
+        argtypes,
+        functionloc,
+        prefix
+    )
     reset_timer && TimerOutputsTracked.reset_timer()
     enable_timer!(TO[])
-    result = Cassette.overdub(TOCtx(), f, args...; kw...)
+    result = Cassette.overdub(TOCtx(; metadata), f, args...)
     disable_timer!(TO[])
     if warn && !hastimings()
         @warn "No tracked functions have been called, so nothing has been timed."
@@ -50,15 +56,9 @@ function timetracked(f, args...; reset_timer=true, warn=false, kw...)
     return result
 end
 
-macro timetracked(ex, reset_timer=true, warn=false, show_argtypes=nothing, show_functionloc=nothing)
+macro timetracked(ex, kw...)
     @capture(ex, f_(args__))
-    quote
-        TimerOutputsTracked.timetracked(
-            $f, $(args...);
-            reset_timer=$reset_timer, warn=$warn,
-            show_argtypes=$show_argtypes, show_functionloc=$show_functionloc
-        )
-    end |> esc
+    :(TimerOutputsTracked.timetracked($f, $(args...); $(kw...))) |> esc
 end
 
 """
