@@ -9,6 +9,8 @@ const TO = Ref(TimerOutput())
 
 const VERBOSE = Ref(false)
 const SHOW_ARGTYPES = Ref(false)
+const SHOW_DEF = Ref(false)
+const PREFIX = Ref(homedir() => "~")
 
 Cassette.@context TOCtx
 
@@ -18,10 +20,18 @@ function Cassette.overdub(ctx::TOCtx, f, args...)
         argtypes = typeof.(args)
         VERBOSE[] && println("OVERDUBBING: ", f, argtypes)
         # return @timeit TO "$f" f(args...)
-        timer_groupname = if SHOW_ARGTYPES[]
-            "$f $argtypes"
-        else
-            "$f"
+        timer_groupname = string(f)
+        if SHOW_ARGTYPES[]
+            timer_groupname *= string(argtypes)
+        end
+        if SHOW_DEF[]
+            filename, line = '?', '?'
+            try
+                filename, line = functionloc(f, argtypes)
+                filename = replace(filename, PREFIX[])
+            catch
+            end
+            timer_groupname *= " at " * filename * ':' * string(line)
         end
         return @timeit TO[] timer_groupname Cassette.recurse(ctx, f, args...)
     else
