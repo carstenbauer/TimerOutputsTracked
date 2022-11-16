@@ -17,13 +17,13 @@ function Cassette.overdub(ctx::TOCtx, f, args...)
     if f in TRACKED_FUNCS
         argtypes = typeof.(args)
         VERBOSE[] && println("OVERDUBBING: ", f, argtypes)
-        # return @timeit gettimer() "$f" f(args...)
+        # return @timeit TO "$f" f(args...)
         timer_groupname = if SHOW_ARGTYPES[]
             "$f $argtypes"
         else
             "$f"
         end
-        return @timeit gettimer() timer_groupname Cassette.recurse(ctx, f, args...)
+        return @timeit TO timer_groupname Cassette.recurse(ctx, f, args...)
     else
         return f(args...)
     end
@@ -31,9 +31,9 @@ end
 
 function timetracked(f, args...; reset_timer=true, warn=false)
     reset_timer && TimerOutputsTracked.reset_timer()
-    enable_timer!(gettimer())
+    enable_timer!(TO)
     result = Cassette.overdub(TOCtx(), f, args...)
-    disable_timer!(gettimer())
+    disable_timer!(TO)
     if warn && !hastimings()
         @warn("No tracked functions have been called, so nothing has been timed.")
     end
@@ -47,7 +47,16 @@ macro timetracked(ex, reset_timer=true, warn=false)
     end |> esc
 end
 
-function track(f)
+"""
+    track(m::Module)
+
+Track functions exported from a module.
+"""
+function track(m::Module; all = false)
+    TimerOutputsTracked.track(filter(x -> x isa Function, getfield.(Ref(m), names(m; all)))...)
+end
+
+function track(f::Function)
     if f in TRACKED_FUNCS
         @info("Already tracked.")
     else
@@ -77,9 +86,7 @@ gettracked() = TRACKED_FUNCS
 function tracked()
     if !isempty(TRACKED_FUNCS)
         printstyled("Tracked functions:\n"; color=:white, bold=true)
-        for f in TRACKED_FUNCS
-            println(f)
-        end
+        foreach(println, TRACKED_FUNCS)
     else
         printstyled("No functions tracked.\n"; color=:white, bold=true)
     end
@@ -88,14 +95,13 @@ end
 
 istracked(f) = f in TRACKED_FUNCS
 
-gettimer() = TO
 function reset_timer()
-    reset_timer!(gettimer())
-    disable_timer!(gettimer())
+    reset_timer!(TO)
+    disable_timer!(TO)
     return nothing
 end
-timings_tracked() = show(gettimer())
-hastimings() = !isempty(gettimer().inner_timers)
+timings_tracked() = display(TO)
+hastimings() = !isempty(TO.inner_timers)
 
 function reset()
     reset_timer()
