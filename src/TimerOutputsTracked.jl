@@ -5,7 +5,7 @@ using TimerOutputs
 using MacroTools
 
 const TRACKED_FUNCS = Set{Function}()
-const TO = TimerOutput()
+const TO = Ref(TimerOutput())
 
 const VERBOSE = Ref(false)
 const SHOW_ARGTYPES = Ref(false)
@@ -23,7 +23,7 @@ function Cassette.overdub(ctx::TOCtx, f, args...)
         else
             "$f"
         end
-        return @timeit TO timer_groupname Cassette.recurse(ctx, f, args...)
+        return @timeit TO[] timer_groupname Cassette.recurse(ctx, f, args...)
     else
         return f(args...)
     end
@@ -31,9 +31,9 @@ end
 
 function timetracked(f, args...; reset_timer=true, warn=false)
     reset_timer && TimerOutputsTracked.reset_timer()
-    enable_timer!(TO)
+    enable_timer!(TO[])
     result = Cassette.overdub(TOCtx(), f, args...)
-    disable_timer!(TO)
+    disable_timer!(TO[])
     if warn && !hastimings()
         @warn("No tracked functions have been called, so nothing has been timed.")
     end
@@ -83,12 +83,12 @@ end
 
 gettracked() = TRACKED_FUNCS
 
-function tracked()
+function tracked(io::IO = stdout)
     if !isempty(TRACKED_FUNCS)
-        printstyled("Tracked functions:\n"; color=:white, bold=true)
-        foreach(println, TRACKED_FUNCS)
+        printstyled(io, "Tracked functions:\n"; color=:white, bold=true)
+        foreach(f -> println(io, f), TRACKED_FUNCS)
     else
-        printstyled("No functions tracked.\n"; color=:white, bold=true)
+        printstyled(io, "No functions tracked.\n"; color=:white, bold=true)
     end
     return nothing
 end
@@ -96,12 +96,12 @@ end
 istracked(f) = f in TRACKED_FUNCS
 
 function reset_timer()
-    reset_timer!(TO)
-    disable_timer!(TO)
+    reset_timer!(TO[])
+    disable_timer!(TO[])
     return nothing
 end
-timings_tracked() = display(TO)
-hastimings() = !isempty(TO.inner_timers)
+timings_tracked(io::IO = stdout) = print_timer(io, TO[])
+hastimings() = !isempty(TO[].inner_timers)
 
 function reset()
     reset_timer()
