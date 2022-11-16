@@ -13,6 +13,7 @@ Cassette.@context TOCtx
 function Cassette.overdub(ctx::TOCtx, f, args...)
     kw = ctx.metadata[:kw]  # github.com/JuliaLabs/Cassette.jl/issues/152
     isempty(kw) || @warn "discarding keyword arguments" kw  # TODO: handle keyword arguments ?
+    @show f, f in TRACKED_FUNCS
     if f in TRACKED_FUNCS
         argtypes = typeof.(args)
         ctx.metadata[:verbose] && println("OVERDUBBING: ", f, argtypes)
@@ -66,9 +67,9 @@ macro timetracked(ex, kw...)
 end
 
 """
-    track(m::Module)
+    track(m::Module; all = false)
 
-Track functions exported from a module.
+Track functions exported from a module, and optionally the un-exported ones.
 """
 track(m::Module; all = false) =
     TimerOutputsTracked.track(filter(x -> x isa Function, getfield.(Ref(m), names(m; all)))...)
