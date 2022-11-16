@@ -18,10 +18,10 @@ function Cassette.overdub(ctx::TOCtx, f, args...)
         argtypes = typeof.(args)
         verbose() && println("OVERDUBBING: ", f, argtypes)
         # return @timeit gettimer() "$f" f(args...)
-        if show_argtypes()
-            timer_groupname = "$f $argtypes"
+        timer_groupname = if show_argtypes()
+            "$f $argtypes"
         else
-            timer_groupname = "$f"
+            "$f"
         end
         return @timeit gettimer() timer_groupname Cassette.recurse(ctx, f, args...)
     else
@@ -42,9 +42,9 @@ end
 
 macro timetracked(ex)
     @capture(ex, f_(args__))
-    esc(quote
-        TimerOutputsTracked.timetracked($f, $(args)...)
-    end)
+    quote
+        TimerOutputsTracked.timetracked($f, $(args...))
+    end |> esc
 end
 
 function track(f)
