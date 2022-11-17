@@ -1,8 +1,10 @@
 module TimerOutputsTracked
 
-using Cassette
+export timetracked, @timetracked, timings_tracked
+
 using TimerOutputs
 using MacroTools
+using Cassette
 
 const TRACKED_FUNCS = Set{Function}()
 const TO = Ref(TimerOutput())
@@ -13,7 +15,6 @@ Cassette.@context TOCtx
 function Cassette.overdub(ctx::TOCtx, f, args...)
     kw = ctx.metadata[:kw]  # github.com/JuliaLabs/Cassette.jl/issues/152
     isempty(kw) || @warn "discarding keyword arguments" kw  # TODO: handle keyword arguments ?
-    @show f, f in TRACKED_FUNCS
     if f in TRACKED_FUNCS
         argtypes = typeof.(args)
         ctx.metadata[:verbose] && println("OVERDUBBING: ", f, argtypes)
@@ -25,10 +26,10 @@ function Cassette.overdub(ctx::TOCtx, f, args...)
             filename, line = "?", 0
             try
                 filename, line = functionloc(f, argtypes)
-                if (prefix = ctx.metadata[:prefix]) !== nothing
-                    filename = replace(filename, prefix)
-                end
             catch
+            end
+            if (prefix = ctx.metadata[:prefix]) !== nothing
+                filename = replace(filename, prefix)
             end
             timer_groupname *= " at " * something(filename, "?") * ":" * (line == 0 ? "?" : string(line))
         end
@@ -55,10 +56,8 @@ function timetracked(
     enable_timer!(TO[])
     result = Cassette.overdub(TOCtx(; metadata), f, args...)
     disable_timer!(TO[])
-    if warn && !hastimings()
-        @warn "No tracked functions have been called, so nothing has been timed."
-    end
-    return result
+    (warn && !hastimings()) && @warn "No tracked functions have been called, so nothing has been timed."
+    result
 end
 
 macro timetracked(ex, kw...)
@@ -80,9 +79,9 @@ function track(f::Function)
     else
         push!(TRACKED_FUNCS, f)
     end
-    return nothing
+    nothing
 end
-track(fs...) = (track.(fs); return nothing)
+track(fs...) = (track.(fs); nothing)
 track(fs::AbstractVector) = track(fs...)
 
 function untrack(f)
@@ -91,24 +90,24 @@ function untrack(f)
     else
         @info "Not tracked, thus can't untrack."
     end
-    return nothing
+    nothing
 end
 
 function untrackall()
     empty!(TRACKED_FUNCS)
-    return nothing
+    nothing
 end
 
 gettracked() = TRACKED_FUNCS
 
 function tracked(io::IO = stdout)
-    if !isempty(TRACKED_FUNCS)
+    if isempty(TRACKED_FUNCS)
+        printstyled(io, "No functions tracked.\n"; color=:white, bold=true)
+    else
         printstyled(io, "Tracked functions:\n"; color=:white, bold=true)
         foreach(f -> println(io, f), TRACKED_FUNCS)
-    else
-        printstyled(io, "No functions tracked.\n"; color=:white, bold=true)
     end
-    return nothing
+    nothing
 end
 
 istracked(f) = f in TRACKED_FUNCS
@@ -116,7 +115,7 @@ istracked(f) = f in TRACKED_FUNCS
 function reset_timer()
     reset_timer!(TO[])
     disable_timer!(TO[])
-    return nothing
+    nothing
 end
 timings_tracked(io::IO = stdout) = print_timer(io, TO[])
 hastimings() = !isempty(TO[].inner_timers)
@@ -125,7 +124,5 @@ function reset()
     reset_timer()
     untrackall()
 end
-
-export timetracked, @timetracked, timings_tracked
 
 end
